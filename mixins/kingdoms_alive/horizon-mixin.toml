@@ -27,6 +27,12 @@ file = "crates/horizon-client/src/game.rs"
 source = "settlement_server.rs"
 
 [[module]]
+id = "warehouse"
+name = "kingdoms_alive_warehouse"
+file = "crates/horizon-client/src/game.rs"
+source = "warehouse.rs"
+
+[[module]]
 id = "delivery"
 name = "kingdoms_alive_delivery"
 file = "crates/horizon-client/src/game.rs"

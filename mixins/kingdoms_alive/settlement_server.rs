@@ -9,6 +9,7 @@ use kingdoms_alive_core::persistence;
 use kingdoms_alive_core::settlement::{Need, Settlement, Territory};
 
 use super::kingdoms_alive_delivery::Delivery;
+use super::kingdoms_alive_warehouse::Warehouses;
 
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -31,6 +32,7 @@ enum World {
         settlement: Settlement,
         last_need: Option<Option<Need>>,
         delivery: Option<Delivery>,
+        warehouses: Warehouses,
     },
 }
 
@@ -47,6 +49,7 @@ fn activate(settlement: Settlement, dir: &Path) -> World {
         settlement,
         last_need: None,
         delivery,
+        warehouses: Warehouses::new(dir.to_path_buf()),
     }
 }
 
@@ -181,14 +184,20 @@ pub(super) fn tick(game: &mut super::Game<'_>, context: &NativeLifecycleContext)
                 }
             }
         }
-        if let World::Active { settlement, last_need, .. } = world {
-            let need = settlement.next_need(16, 16);
+        if let World::Active { settlement, last_need, warehouses, .. } = world {
+            let Some(stockpile) = warehouses.observe(game, settlement) else {
+                *last_need = None;
+                return;
+            };
+            // The persisted M1 stock remains historical; planning sees physical observations only.
+            let observed = Settlement { stockpile, ..settlement.clone() };
+            let need = observed.next_need(16, 16);
             if *last_need != Some(need) {
                 log::info!(
                     "[kingdoms_alive] M1 tick={tick} id={} residents={} stockpile={:?} need={need:?}",
                     settlement.id,
                     settlement.residents.len(),
-                    settlement.stockpile,
+                    stockpile,
                 );
                 *last_need = Some(need);
             }
