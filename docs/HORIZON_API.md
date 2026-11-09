@@ -42,6 +42,18 @@
 
 Проверены заполненный склад, отзыв запроса, разрушение сундука во время переноски, отказ повторного адреса и удержание незавершённого груза при перезапуске. Инъекция сбоев и выгрузка чанка не проверены. Журнал пока только предотвращает слепой повтор. [Протокол следующего шага](M2_RECOVERY.md).
 
+## Проверенный кодек свидетельства recovery
+
+На той же ревизии `fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca` интегратор прочитал публичные исходники:
+
+- [items.rs:332–338](https://github.com/horizon-rust/horizon/blob/fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca/crates/horizon-items/src/items.rs#L332): ItemStack содержит item/count/damage/extra, без derive Serialize. [item_nbt.rs:7–54](https://github.com/horizon-rust/horizon/blob/fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca/crates/horizon-items/src/item_nbt.rs#L7) даёт item_to_nbt/item_from_nbt. Декодер ограничивает count 1..=99, вне диапазона default=1; нельзя считать любой runtime-стек обратимым.
+- [item_data.rs:748–801](https://github.com/horizon-rust/horizon/blob/fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca/crates/horizon-items/src/item_data.rs#L748): контекстно-независимый encode_components отличается от варианта с прототипами items. Runtime wire/выбранный элемент bundle исключены из равенства и сохранения; это не гарантия побайтного снимка runtime-структуры.
+- [nbt.rs:437–495,678–688](https://github.com/horizon-rust/horizon/blob/fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca/crates/horizon-world/src/nbt.rs#L678): write_network сохраняет типы NBT и UTF-16, отказывает слишком длинным строкам; read_network нормализует отрицательный ноль float. `loot_codec.rs` проверяет обратное чтение Tag и ItemStack и отказывает при расхождении.
+- [scoreboard.rs:36–72](https://github.com/horizon-rust/horizon/blob/fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca/crates/horizon-client-core/src/scoreboard.rs#L36): tag_to_json превращает Byte в bool и теряет типы NBT/часть UTF-16, поэтому для квитанции **не используется**. JSON хранит массивы исходных типизированных NBT-байтов, не перевод компонентов в обычный JSON.
+- [native_machines.rs:51–61](https://github.com/horizon-rust/horizon/blob/fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca/crates/horizon-client/src/game/native_machines.rs#L51): destroy_block предшествует возврату drops. Новой атомарной операции не найдено; это подтверждает окно, не доказывает отсутствия альтернатив во всём движке.
+
+Три теста настоящего кодека прошли отдельно от Cargo ядра через tools/check_loot_codec.py. Запись фактического результата подключена, но новые мутации лесоруба выключены. На `native-fdc87ae-340eb0689559` проверены только отказ новых мутаций, синтетический pending после двух открытий и сохранение .tmp при отказе. Аварийная сохранность, доступ игроков/ванили до сверки и выгрузка чанков не подтверждены.
+
 ## Автоматизация
 
 Проверено соединение с `horizon-launcher mcp` по stdin/stdout. Сервер 0.2.57 вернул 191 инструмент, включая `play` и `game_hello`. Конфигурация этого компьютера лежит в игнорируемом `.codex/config.toml`. `codex mcp get horizon --json` видит её из корня проекта. Для появления инструментов в чате после изменения настроек открой новый сеанс. [Руководство по управлению](https://playhorizon.dev/docs/agents)

@@ -34,11 +34,26 @@ impl Lumberjack {
             ));
         }
         let journal = Journal::open(dir, request)?;
-        // An untagged hand cannot prove ownership after external mutation during downtime.
-        // Even Carrying requires reconciliation; never assume a replacement log is this cargo.
-        let stopped = journal.pending().is_some();
-        if stopped {
-            log::warn!("[kingdoms_alive] M2 lumberjack interrupted operation held; no replay");
+        // Diagnostics never authorize replay, compensation, or phase changes.
+        if let Some(op) = journal.pending() {
+            let operation = journal.recovery_operation(dir, op)?;
+            let observed = kingdoms_alive_core::recovery::Snapshot {
+                block: kingdoms_alive_core::recovery::Observation::Unavailable,
+                cargo: kingdoms_alive_core::recovery::Observation::Unavailable,
+                warehouse: kingdoms_alive_core::recovery::Observation::Unavailable,
+            };
+            let decision = kingdoms_alive_core::recovery::reconcile(&operation, &observed);
+            log::warn!(
+                "[kingdoms_alive] M2 lumberjack interrupted operation held; no replay; recovery={decision:?}"
+            );
+        }
+        // Neither world approval nor a matching observation proves durable ordering.
+        let stopped =
+            journal.pending().is_some() || !kingdoms_alive_core::lumberjack::MUTATIONS_ENABLED;
+        if !kingdoms_alive_core::lumberjack::MUTATIONS_ENABLED {
+            log::warn!(
+                "[kingdoms_alive] M2 lumberjack mutations disabled: durable ordering unproven"
+            );
         }
         Ok(Some(Self {
             dir: dir.into(),
@@ -53,7 +68,7 @@ impl Lumberjack {
         log::warn!("[kingdoms_alive] M2 lumberjack held: {reason}");
     }
     pub(super) fn tick(&mut self, game: &mut super::Game<'_>, town: &Settlement, tick: u64) {
-        if self.stopped || tick % 5 != 0 {
+        if !kingdoms_alive_core::lumberjack::MUTATIONS_ENABLED || self.stopped || tick % 5 != 0 {
             return;
         }
         if self
@@ -212,10 +227,26 @@ impl Lumberjack {
             self.held("harvest refused after intent");
             return;
         };
+        // Persist the actual result before any further mutation. The engine call
+        // above still has an unavoidable unjournaled window: mutations stay disabled.
+        let loot = match super::kingdoms_alive_loot_codec::serialize_loot(&drops) {
+            Ok(loot) => loot,
+            Err(_) => {
+                self.held("actual loot codec refused; no further mutation");
+                return;
+            }
+        };
+        if self.journal.record_actual_loot(&self.dir, loot).is_err() {
+            self.held("actual loot persistence failed; no further mutation");
+            return;
+        }
         // The helper can report drops even when replacement was vetoed. Do not
         // spawn those stacks while the source still exists: that would duplicate it.
         if game.native_level_block(level, source).as_deref() != Some("minecraft:air") {
-            let _ = self.journal.transition(&self.dir, Phase::Held);
+            if self.journal.transition(&self.dir, Phase::Held).is_err() {
+                self.held("source removal unconfirmed; hold receipt persistence failed");
+                return;
+            }
             self.held("source removal unconfirmed; no cargo or dropped copy created");
             return;
         }
@@ -223,8 +254,14 @@ impl Lumberjack {
             for stack in drops {
                 game.pop_resource(source, stack);
             }
-            let _ = game.save_level(true);
-            let _ = self.journal.transition(&self.dir, Phase::Held);
+            if game.save_level(true).is_err() {
+                self.held("nonstandard loot persistence failed; reconcile physical drops");
+                return;
+            }
+            if self.journal.transition(&self.dir, Phase::Held).is_err() {
+                self.held("nonstandard loot hold receipt persistence failed");
+                return;
+            }
             self.held("nonstandard loot dropped physically at source; not rerolled");
             return;
         }

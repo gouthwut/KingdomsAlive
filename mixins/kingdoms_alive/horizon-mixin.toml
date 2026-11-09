@@ -39,6 +39,12 @@ file = "crates/horizon-client/src/game.rs"
 source = "lumberjack_world.rs"
 
 [[module]]
+id = "loot_codec"
+name = "kingdoms_alive_loot_codec"
+file = "crates/horizon-client/src/game.rs"
+source = "loot_codec.rs"
+
+[[module]]
 id = "lumberjack"
 name = "kingdoms_alive_lumberjack"
 file = "crates/horizon-client/src/game.rs"
