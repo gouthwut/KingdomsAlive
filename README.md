@@ -5,8 +5,8 @@ Kingdoms Alive is a native Rust mod for Minecraft Java Edition on Horizon. Its g
 ## Development status
 
 - **M0 complete.** Horizon compiled the native hook, and a separate Windows test profile opened a disposable world and confirmed that the integrated server called it.
-- **M1 in progress.** The Rust core models settlements, residents, housing, stockpiles, and priorities. It reads and writes versioned settlement snapshots and protects invalid or newer snapshots from being overwritten. The core has unit and integration checks. In-game village registration, server ticks, and save/reopen verification are still pending.
-- Resource gathering, hauling, and construction are planned features. The current in-game bundle records a server startup marker. Dedicated servers and multiplayer are unverified.
+- **M1 complete.** The server can register one existing village in an approved territory, calculate its priority on the server tick and restore its versioned snapshot when the world reopens. These behaviors were verified in an isolated game world.
+- Resource gathering, hauling, and construction are planned features. Dedicated servers and multiplayer are unverified.
 
 See the [roadmap](docs/ROADMAP.md) and [progress log](docs/PROGRESS.md) for milestone criteria and test results.
 
@@ -33,12 +33,12 @@ Approved builds will appear as `.hnmod` files on [GitHub Releases](https://githu
    ```powershell
    $launcher = "$env:LOCALAPPDATA/Programs/Horizon Launcher/horizon-launcher.exe"
    $bundle = (Resolve-Path ./kingdoms_alive-0.1.0).Path
-   & $launcher instance create 'Kingdoms Alive M0' # Once per profile
-   & $launcher native-build $bundle --instance kingdoms-alive-m0 --version nightly-2026-11-08-fdc87ae --profile performance --trust-native-code
-   & $launcher play --instance kingdoms-alive-m0 --world KA-M0-Smoke --creative
+   & $launcher instance create 'Kingdoms Alive M1' # Once per profile
+   & $launcher native-build $bundle --instance kingdoms-alive-m1 --version nightly-2026-11-08-fdc87ae --profile performance --trust-native-code
+   & $launcher play --instance kingdoms-alive-m1 --world KA-M1-Village --creative
    ```
 
-4. Check the profile log for `[kingdoms_alive] M0 server_about_to_start dedicated=false`. The [testing guide](docs/TESTING.md) lists the log locations and the automated smoke test.
+4. Follow the [M1 testing guide](docs/TESTING.md) to register a village and check the resulting snapshot.
 
 For a source checkout, point `$bundle` at `./mixins/kingdoms_alive`. To play without the mod, select your regular Horizon profile.
 

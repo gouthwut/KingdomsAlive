@@ -15,3 +15,53 @@ helper = "server_start_smoke.rs"
 bindings = [
   { name = "dedicated", ty = "bool", value = "dedicated" },
 ]
+
+[[crate]]
+id = "core"
+path = "core"
+
+[[module]]
+id = "settlement_server"
+name = "kingdoms_alive"
+file = "crates/horizon-client/src/game.rs"
+source = "settlement_server.rs"
+
+[[injection]]
+id = "settlement_tick"
+kind = "HEAD"
+hook = "server_tick"
+hook_version = 1
+helper = "settlement_tick.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "context", ty = "&crate::mod_api::NativeLifecycleContext", value = "context" },
+  { name = "phase", ty = "crate::mod_api::ServerTickPhase", value = "phase" },
+]
+
+[[injection]]
+id = "settlement_stop"
+kind = "HEAD"
+hook = "server_stopping"
+hook_version = 1
+helper = "settlement_stop.rs"
+
+[[injection]]
+id = "settlement_listen"
+kind = "HEAD"
+hook = "entity_tick_listened"
+hook_version = 1
+helper = "settlement_listen.rs"
+bindings = [{ name = "listened", ty = "&mut bool", value = "&mut *listened" }]
+
+[[injection]]
+id = "settlement_observe"
+kind = "HEAD"
+hook = "entity_tick_post"
+hook_version = 1
+helper = "settlement_observe.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "dimension", ty = "&str", value = "dimension" },
+  { name = "entity", ty = "u32", value = "entity" },
+  { name = "kind", ty = "&str", value = "kind" },
+]

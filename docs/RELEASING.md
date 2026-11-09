@@ -4,7 +4,7 @@
 
 The [workflow](../.github/workflows/ci-release.yml) checks formatting for both the Rust core and the native hook, runs Clippy and core tests, then packages and validates the mod on a GitHub-hosted Windows runner. It uses the [official packager at a fixed revision](https://github.com/horizon-rust/horizon-mods/blob/e2e833d68c3d18ea75af537e73a3bd2bd2bd21fb/native/tools/native.py) and builds the package checker from the [pinned Horizon revision](https://github.com/horizon-rust/horizon/tree/fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca/crates/cargo-horizon-mod).
 
-The packager reads the compatibility file, the native bundle, and the project's LICENSE when present. The current bundle contains the M0 hook. The separate M1 Rust library is checked by CI and is outside the bundle.
+The packager reads the compatibility file, the native bundle and the project's LICENSE. The bundle includes the server hooks and the M1 Rust library. CI tests the library independently of the game.
 
 Packaging and validation require Python, Rust and access to public source and dependency repositories. Compiling the mod into the launcher and starting a Minecraft world are separate checks. Perform them with your own Minecraft files on an isolated local profile and disposable world. See the [testing guide](TESTING.md).
 

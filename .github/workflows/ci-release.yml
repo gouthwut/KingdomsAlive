@@ -28,7 +28,8 @@ jobs:
         run: |
           cargo +1.99.0 fmt --all --check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          rustup run 1.99.0 rustfmt --edition 2024 --check mixins/kingdoms_alive/server_start_smoke.rs
+          $helpers = (Get-ChildItem mixins/kingdoms_alive -Filter '*.rs').FullName
+          rustup run 1.99.0 rustfmt --edition 2024 --check @helpers
       - name: Lint Rust
         run: cargo +1.99.0 clippy --locked --all-targets -- -D warnings
       - name: Test the settlement core
