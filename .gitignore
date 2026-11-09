@@ -1,0 +1,4 @@
+/target/
+/.sharrowkin/
+/.codex/config.toml
+__pycache__/

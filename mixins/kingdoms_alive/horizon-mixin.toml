@@ -1,0 +1,17 @@
+[mod]
+id = "kingdoms_alive"
+version = "0.1.0"
+priority = 100
+
+[compatibility]
+horizon_revision = "fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca"
+
+[[injection]]
+id = "server_start_smoke"
+kind = "HEAD"
+hook = "server_about_to_start"
+hook_version = 1
+helper = "server_start_smoke.rs"
+bindings = [
+  { name = "dedicated", ty = "bool", value = "dedicated" },
+]
