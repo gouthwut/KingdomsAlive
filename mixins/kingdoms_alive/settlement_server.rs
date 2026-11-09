@@ -8,6 +8,8 @@ use crate::mod_api::{NativeLifecycleContext, NativeWorldEpoch};
 use kingdoms_alive_core::persistence;
 use kingdoms_alive_core::settlement::{Need, Settlement, Territory};
 
+use super::kingdoms_alive_delivery::Delivery;
+
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Registration {
@@ -28,6 +30,7 @@ enum World {
     Active {
         settlement: Settlement,
         last_need: Option<Option<Need>>,
+        delivery: Option<Delivery>,
     },
 }
 
@@ -35,17 +38,22 @@ thread_local! {
     static WORLD: RefCell<Option<(NativeWorldEpoch, World)>> = const { RefCell::new(None) };
 }
 
-fn activate(settlement: Settlement) -> World {
+fn activate(settlement: Settlement, dir: &Path) -> World {
+    let delivery = Delivery::open(dir, &settlement).unwrap_or_else(|error| {
+        log::warn!("[kingdoms_alive] M2 request refused: {error}");
+        None
+    });
     World::Active {
         settlement,
         last_need: None,
+        delivery,
     }
 }
 
 fn open(dir: &Path) -> io::Result<World> {
     if let Some(settlement) = persistence::load(dir)? {
         log::info!("[kingdoms_alive] M1 loaded id={}", settlement.id);
-        return Ok(activate(settlement));
+        return Ok(activate(settlement, dir));
     }
 
     let bytes = match std::fs::read(dir.join("kingdoms_alive_register.json")) {
@@ -117,11 +125,14 @@ fn territory_loaded(game: &super::Game<'_>, territory: &Territory) -> bool {
     })
 }
 
-pub(super) fn tick(game: &super::Game<'_>, context: &NativeLifecycleContext) {
+pub(super) fn tick(game: &mut super::Game<'_>, context: &NativeLifecycleContext) {
     let tick = context.tick.get();
     WORLD.with_borrow_mut(|state| {
         if state.as_ref().is_some_and(|(epoch, _)| *epoch != context.epoch) {
             *state = None;
+        }
+        if let Some((_, World::Active { settlement, delivery: Some(delivery), .. })) = state {
+            delivery.tick(game, settlement, tick);
         }
         if let Some((_, World::Pending(pending))) = state
             && tick % 20 != 0
@@ -162,7 +173,7 @@ pub(super) fn tick(game: &super::Game<'_>, context: &NativeLifecycleContext) {
             match persistence::save(&pending.dir, &settlement) {
                 Ok(()) => {
                     log::info!("[kingdoms_alive] M1 registered id={}", settlement.id);
-                    *world = activate(settlement);
+                    *world = activate(settlement, &pending.dir);
                 }
                 Err(error) => {
                     log::error!("[kingdoms_alive] M1 registration refused: {error}");
@@ -170,7 +181,7 @@ pub(super) fn tick(game: &super::Game<'_>, context: &NativeLifecycleContext) {
                 }
             }
         }
-        if let World::Active { settlement, last_need } = world {
+        if let World::Active { settlement, last_need, .. } = world {
             let need = settlement.next_need(16, 16);
             if *last_need != Some(need) {
                 log::info!(

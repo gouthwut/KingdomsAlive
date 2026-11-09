@@ -26,6 +26,12 @@ name = "kingdoms_alive"
 file = "crates/horizon-client/src/game.rs"
 source = "settlement_server.rs"
 
+[[module]]
+id = "delivery"
+name = "kingdoms_alive_delivery"
+file = "crates/horizon-client/src/game.rs"
+source = "delivery.rs"
+
 [[injection]]
 id = "settlement_tick"
 kind = "HEAD"

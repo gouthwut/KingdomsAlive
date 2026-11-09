@@ -6,7 +6,9 @@ Kingdoms Alive is a native Rust mod for Minecraft Java Edition on Horizon. Its g
 
 - **M0 complete.** Horizon compiled the native hook, and a separate Windows test profile opened a disposable world and confirmed that the integrated server called it.
 - **M1 complete.** The server can register one existing village in an approved territory, calculate its priority on the server tick and restore its versioned snapshot when the world reopens. These behaviors were verified in an isolated game world.
-- Resource gathering, hauling, and construction are planned features. Dedicated servers and multiplayer are unverified.
+- **M2 pilot.** In a separate test world, an existing villager walked to an approved chest and deposited one oak log from its off hand. The chest respected capacity, and saving and reopening preserved one item without replaying the delivery. See the [M2 test setup](docs/TESTING.md#пилот-m2).
+- **Pilot safety limit.** Delivery is explicitly enabled per test world, never generates cargo, and refuses replay after a claim. It is not crash-atomic: a crash between separate entity and chest writes can lose the log. Do not enable it in valued worlds.
+- Automatic gathering, repeatable jobs, and construction are planned features. Dedicated servers and multiplayer are unverified.
 
 See the [roadmap](docs/ROADMAP.md) and [progress log](docs/PROGRESS.md) for milestone criteria and test results.
 
