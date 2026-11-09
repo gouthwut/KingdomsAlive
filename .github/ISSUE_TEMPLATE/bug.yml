@@ -1,0 +1,29 @@
+name: Bug report
+description: Report a reproducible problem in Kingdoms Alive.
+body:
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions and platform
+      description: Include the Kingdoms Alive version or commit, Minecraft version, Horizon Nightly, launcher version, operating system, and server type.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Describe how to reproduce the problem in a disposable world. Mention any other installed mods.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log excerpt
+      description: Remove credentials, local paths, and personal information. Share a short excerpt and keep game files and saves private.
+      render: text

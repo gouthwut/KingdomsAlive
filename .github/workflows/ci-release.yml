@@ -1,0 +1,101 @@
+name: CI and release
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Check Rust and package the mod
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install Rust
+        run: rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
+      - name: Check formatting
+        run: |
+          cargo +1.99.0 fmt --all --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup run 1.99.0 rustfmt --edition 2024 --check mixins/kingdoms_alive/server_start_smoke.rs
+      - name: Lint Rust
+        run: cargo +1.99.0 clippy --locked --all-targets -- -D warnings
+      - name: Test the settlement core
+        run: cargo +1.99.0 test --locked
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: horizon-rust/horizon-mods
+          ref: e2e833d68c3d18ea75af537e73a3bd2bd2bd21fb
+          path: .ci-upstream/horizon-mods
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: horizon-rust/horizon
+          ref: fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca
+          path: .ci-upstream/horizon
+          persist-credentials: false
+      - name: Build Horizon's package checker
+        working-directory: .ci-upstream/horizon
+        run: cargo +1.99.0 build --locked -p cargo-horizon-mod
+      - name: Package and validate
+        run: |
+          $modRoot = (Get-Location).Path
+          $result = python .ci-upstream/horizon-mods/native/tools/native.py package $modRoot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $package = $result | ConvertFrom-Json
+          .ci-upstream/horizon/target/debug/cargo-horizon-mod.exe check $package.file --json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            if (-not (Test-Path LICENSE -PathType Leaf)) {
+              throw 'A release requires an approved LICENSE.'
+            }
+            $expected = "kingdoms_alive-$($env:GITHUB_REF_NAME.Substring(1)).hnmod"
+            if ((Split-Path -Leaf $package.file) -cne $expected) {
+              throw 'The release tag must match the mod manifest version.'
+            }
+          }
+          New-Item -ItemType Directory -Path target/release -Force | Out-Null
+          Copy-Item -LiteralPath $package.file -Destination target/release/
+      - name: Transfer the verified package for the release
+        if: github.event_name == 'push' && github.ref_type == 'tag' && vars.RELEASES_ENABLED == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: hnmod
+          path: target/release/*.hnmod
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish the approved GitHub release
+    needs: verify
+    if: github.event_name == 'push' && github.ref_type == 'tag' && vars.RELEASES_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: hnmod
+          path: dist
+      - name: Publish the verified package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          package="dist/kingdoms_alive-${GITHUB_REF_NAME#v}.hnmod"
+          test -f "$package"
+          gh release create --verify-tag --generate-notes -- "$GITHUB_REF_NAME" "$package"
