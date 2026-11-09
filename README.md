@@ -16,3 +16,5 @@ $launcher = "$env:LOCALAPPDATA/Programs/Horizon Launcher/horizon-launcher.exe"
 Готовый `.hnmod` можно распаковать и передать путь к папке с `horizon-native.json` в `native-build`. Для упаковки исходников используй `python native/tools/native.py package <путь-к-Kingdoms-Alive>` из репозитория [horizon-mods](https://github.com/horizon-rust/horizon-mods/tree/e2e833d68c3d18ea75af537e73a3bd2bd2bd21fb/native).
 
 Критерий проверки и пути к журналам указаны в [TESTING](docs/TESTING.md). [HANDOFF](docs/HANDOFF.md) содержит текущий статус.
+
+В M1 начата библиотека поселений. Для её проверки запусти `cargo test --locked` и `cargo clippy --locked --all-targets -- -D warnings`. Эти команды запускаются отдельно от сборки Horizon.
