@@ -19,6 +19,10 @@ pub(super) struct Delivery {
 
 impl Delivery {
     pub(super) fn open(dir: &Path, settlement: &Settlement) -> io::Result<Option<Self>> {
+        if kingdoms_alive_core::lumberjack::blocks_legacy(dir) {
+            log::warn!("[kingdoms_alive] M2 legacy delivery held: lumberjack ownership exists");
+            return Ok(None);
+        }
         let Some(request) = Request::open(dir, settlement)? else {
             return Ok(None);
         };
@@ -45,7 +49,9 @@ impl Delivery {
             self.finished = true;
             return;
         };
-        if !request.still_approved(dir, settlement) {
+        if kingdoms_alive_core::lumberjack::blocks_legacy(dir)
+            || !request.still_approved(dir, settlement)
+        {
             self.finished = true;
             if let Some((dimension, id, _)) = game.native_entity_by_uuid(request.resident.get()) {
                 game.native_mob_stop(&dimension, id);

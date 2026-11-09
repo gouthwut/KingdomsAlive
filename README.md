@@ -9,7 +9,8 @@ Kingdoms Alive is a native Rust mod for Minecraft Java Edition on Horizon. Its g
 - **M2 pilot.** In a separate test world, an existing villager walked to an approved chest and deposited one oak log from its off hand. The chest respected capacity, and saving and reopening preserved one item without replaying the delivery. See the [M2 test setup](docs/TESTING.md#пилот-m2).
 - **M2 warehouse registry.** Approved single chests now supply observed stock for settlement planning; historical M1 counters are ignored. Up to eight chests are scanned per step. Missing or conflicting registered containers pause planning instead of reusing stale counts. See the [warehouse setup](docs/TESTING.md#реестр-склада-m2b).
 - **Pilot safety limit.** Delivery is explicitly enabled per test world, never generates cargo, and refuses replay after a claim. It is not crash-atomic: a crash between separate entity and chest writes can lose the log. Do not enable it in valued worlds.
-- Automatic gathering, repeatable jobs, and construction are planned features. Dedicated servers and multiplayer are unverified.
+- **Experimental lumberjack loop.** With explicit test-world approval, a villager finds oak logs in a bounded zone, walks to them, harvests real loot, carries it in the off hand and deposits it into a registered chest. Two consecutive harvests, full storage, cancellation, chest destruction and normal reopening were verified. Interrupted operations are held, not automatically recovered. See the [worker setup](docs/TESTING.md#опытный-лесоруб).
+- Crash-safe recovery, general-purpose jobs, farming and construction remain unfinished. Dedicated servers and multiplayer are unverified.
 
 See the [roadmap](docs/ROADMAP.md) and [progress log](docs/PROGRESS.md) for milestone criteria and test results.
 

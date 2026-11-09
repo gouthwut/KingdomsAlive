@@ -33,6 +33,18 @@ file = "crates/horizon-client/src/game.rs"
 source = "warehouse.rs"
 
 [[module]]
+id = "lumberjack_world"
+name = "kingdoms_alive_lumberjack_world"
+file = "crates/horizon-client/src/game.rs"
+source = "lumberjack_world.rs"
+
+[[module]]
+id = "lumberjack"
+name = "kingdoms_alive_lumberjack"
+file = "crates/horizon-client/src/game.rs"
+source = "lumberjack.rs"
+
+[[module]]
 id = "delivery"
 name = "kingdoms_alive_delivery"
 file = "crates/horizon-client/src/game.rs"

@@ -9,6 +9,7 @@ use kingdoms_alive_core::persistence;
 use kingdoms_alive_core::settlement::{Need, Settlement, Territory};
 
 use super::kingdoms_alive_delivery::Delivery;
+use super::kingdoms_alive_lumberjack::Lumberjack;
 use super::kingdoms_alive_warehouse::Warehouses;
 
 #[derive(serde::Deserialize)]
@@ -33,6 +34,7 @@ enum World {
         last_need: Option<Option<Need>>,
         delivery: Option<Delivery>,
         warehouses: Warehouses,
+        lumberjack: Option<Lumberjack>,
     },
 }
 
@@ -45,7 +47,12 @@ fn activate(settlement: Settlement, dir: &Path) -> World {
         log::warn!("[kingdoms_alive] M2 request refused: {error}");
         None
     });
+    let lumberjack = Lumberjack::open(dir, &settlement).unwrap_or_else(|error| {
+        log::warn!("[kingdoms_alive] M2 lumberjack refused: {error}");
+        None
+    });
     World::Active {
+        lumberjack,
         settlement,
         last_need: None,
         delivery,
@@ -136,6 +143,9 @@ pub(super) fn tick(game: &mut super::Game<'_>, context: &NativeLifecycleContext)
         }
         if let Some((_, World::Active { settlement, delivery: Some(delivery), .. })) = state {
             delivery.tick(game, settlement, tick);
+        }
+        if let Some((_, World::Active { settlement, lumberjack: Some(lumberjack), .. })) = state {
+            lumberjack.tick(game, settlement, tick);
         }
         if let Some((_, World::Pending(pending))) = state
             && tick % 20 != 0
